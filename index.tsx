@@ -496,7 +496,7 @@ const Implementation = () => (
               <div className="p-6 bg-slate-800 rounded-xl border border-slate-700">
                   <h3 className="text-white font-semibold mb-4">Preprocessing</h3>
                   <ul className="text-sm text-slate-400 space-y-2">
-                     <li><i className="fas fa-angle-right text-emerald-400 mr-2"></i>Resize to 224x224</li>
+                     <li><i className="fas fa-angle-right text-emerald-400 mr-2"></i>Resize to 448x448</li>
                      <li><i className="fas fa-angle-right text-emerald-400 mr-2"></i>CLAHE Enhancement</li>
                      <li><i className="fas fa-angle-right text-emerald-400 mr-2"></i>Circle Crop</li>
                   </ul>
