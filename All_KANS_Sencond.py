@@ -45,7 +45,7 @@ from torch.utils.data.distributed import DistributedSampler
 try:
     import cv2
     CV2_AVAILABLE = True
-    print("✓ OpenCV imported successfully")
+    print("[OK] OpenCV imported successfully")
 except ImportError:
     CV2_AVAILABLE = False
     print("Warning: OpenCV not available. Using PIL-based vessel extraction.")
@@ -1296,7 +1296,8 @@ def train_fold(rank, world_size, fold, tr_idx, va_idx, df, args, img_dir, save_d
     def pg(m, lr):
         return {"params": filter(lambda p: p.requires_grad, m.parameters()), "lr": lr}
 
-    m = model.module
+    # 获取实际模型（如果是DDP包装的，需要访问.module）
+    m = model.module if hasattr(model, 'module') else model
     
     # 增强优化器，但减少学习率以节省内存
     opt = torch.optim.AdamW([

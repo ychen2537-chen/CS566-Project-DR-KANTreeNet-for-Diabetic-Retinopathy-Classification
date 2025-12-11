@@ -7,11 +7,11 @@ from torchvision import transforms
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-# 直接使用你在 All_KANS_Sencond.py 里定义的模型类
-from All_KANS_Sencond import EnhancedDRKANTreeNet  # 确保文件名和这个一致
+# Directly use the model class defined in All_KANS_Sencond.py
+from All_KANS_Sencond import EnhancedDRKANTreeNet  # Ensure the filename matches
 
 
-# 与数据集一致的归一化参数
+# Normalization parameters consistent with the dataset
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 IMG_SIZE = 448
@@ -24,7 +24,7 @@ preprocess_transform = transforms.Compose([
 
 
 def load_image_rgb(path: str):
-    """cv2 读取 + BGR->RGB"""
+    """Read image using cv2 and convert BGR->RGB"""
     bgr = cv2.imread(path, cv2.IMREAD_COLOR)
     if bgr is None:
         raise FileNotFoundError(f"Cannot read image at {path}")
@@ -37,8 +37,10 @@ def fig_to_rgb_array(fig):
     canvas = FigureCanvas(fig)
     canvas.draw()
     width, height = fig.canvas.get_width_height()
-    image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
-    image = image.reshape((height, width, 3))
+    # Use buffer_rgba() instead of deprecated tostring_rgb()
+    buf = np.frombuffer(canvas.buffer_rgba(), dtype='uint8')
+    image = buf.reshape((height, width, 4))  # RGBA
+    image = image[:, :, :3]  # Extract RGB (drop alpha channel)
     plt.close(fig)
     return image
 
@@ -56,7 +58,7 @@ def make_image_frame(image_rgb: np.ndarray, title: str = "", description: str = 
 
 
 def make_probability_frame(probs: np.ndarray, class_names, pred_idx: int, figsize=(6, 4)):
-    """画一张最终分类概率的柱状图"""
+    """Create a bar chart showing final classification probabilities"""
     fig, ax = plt.subplots(figsize=figsize)
     x = np.arange(len(class_names))
     ax.bar(x, probs, color="tab:blue")
@@ -74,7 +76,8 @@ def make_probability_frame(probs: np.ndarray, class_names, pred_idx: int, figsiz
 
 def overlay_heatmap_on_image(img_rgb: np.ndarray, heatmap: np.ndarray, alpha: float = 0.5) -> np.ndarray:
     """
-    heatmap: 0~1 的 2D numpy，大小会在外面 resize 成和 img_rgb 一样
+    Overlay heatmap on image.
+    heatmap: 2D numpy array with values in [0, 1], will be resized to match img_rgb size externally
     """
     heatmap = np.clip(heatmap, 0.0, 1.0)
     heatmap_uint8 = np.uint8(255 * heatmap)
@@ -86,7 +89,7 @@ def overlay_heatmap_on_image(img_rgb: np.ndarray, heatmap: np.ndarray, alpha: fl
 
 
 def normalize_tensor_to_0_1(t: torch.Tensor) -> np.ndarray:
-    """把任意 tensor 映射到 [0,1]，返回 numpy"""
+    """Normalize any tensor to [0, 1] range and return as numpy array"""
     t = t.detach().float()
     t = t - t.min()
     maxv = t.max()
@@ -97,28 +100,32 @@ def normalize_tensor_to_0_1(t: torch.Tensor) -> np.ndarray:
 
 def extract_intermediates(model: EnhancedDRKANTreeNet, x: torch.Tensor):
     """
-    x: 已经 resize+normalize 的输入张量 (1,3,IMG_SIZE,IMG_SIZE)
-
-    返回一个 dict，包括：
-      - vessel_mask: (H,W)  血管mask
-      - lesion_attn: (h,w) 病灶注意力热力图（LesionAttention）
-      - dam_attn:    (h,w) DAM增强后的特征强度
-      - vit_heatmap: (14,14) ViT-S patch token 范数
-      - logits:      (1,5) 最终 logits（包含 GCN 头）
+    Extract intermediate results from the model.
+    
+    Args:
+        x: Input tensor that has been resized and normalized (1, 3, IMG_SIZE, IMG_SIZE)
+    
+    Returns:
+        A dictionary containing:
+          - vessel_mask: (H, W) Vessel mask
+          - lesion_attn: (h, w) Lesion attention heatmap (LesionAttention)
+          - dam_attn:    (h, w) Feature intensity after DAM enhancement
+          - vit_heatmap: (14, 14) ViT-S patch token norm
+          - logits:      (1, 5) Final logits (including GCN head)
     """
     model.eval()
 
-    # ------- 1) ResNet 多尺度特征 -------
+    # ------- 1) ResNet multi-scale features -------
     with torch.no_grad():
         res_features = model.res(x)
-        final_features = res_features[4]  # (B,2048,h,w)
+        final_features = res_features[4]  # (B, 2048, h, w)
         mid_features = res_features[2]
         low_features = res_features[1]
 
-        # 血管 mask 来自 EnhancedVesselTreeNet.get_vessel_mask
-        vessel_mask = model.vessel_net.get_vessel_mask(x)[0, 0]  # (H,W)
+        # Vessel mask from EnhancedVesselTreeNet.get_vessel_mask
+        vessel_mask = model.vessel_net.get_vessel_mask(x)[0, 0]  # (H, W)
 
-    # ------- 2) 病灶注意力 + DAM -------
+    # ------- 2) Lesion attention + DAM -------
     lesion_module = model.enhanced_attention
     dam_module = model.res_dam
 
@@ -130,7 +137,7 @@ def extract_intermediates(model: EnhancedDRKANTreeNet, x: torch.Tensor):
         else:
             x_resized = x
 
-        # 通道注意力 (avg + max pool)
+        # Channel attention (avg + max pool)
         avg_pool = F.adaptive_avg_pool2d(final_features, 1)
         max_pool = F.adaptive_max_pool2d(final_features, 1)
         channel_attn = lesion_module.sigmoid(
@@ -141,7 +148,7 @@ def extract_intermediates(model: EnhancedDRKANTreeNet, x: torch.Tensor):
             )
         )
 
-        # 来自原始图像的病灶注意力
+        # Lesion attention from original image
         lesion_feat = lesion_module.lesion_conv(x_resized)
         lesion_attn = lesion_module.lesion_attention(lesion_feat)
 
@@ -154,33 +161,33 @@ def extract_intermediates(model: EnhancedDRKANTreeNet, x: torch.Tensor):
 
         combined_attn = channel_attn * lesion_attn * severe_attn
 
-        # 应用注意力并经过 KANDAM
+        # Apply attention and pass through KANDAM
         r_feats = final_features * combined_attn
         r_feats = dam_module(r_feats)
 
-        lesion_attn_map = combined_attn.mean(dim=1, keepdim=True)  # (B,1,h,w)
-        dam_attn_map = r_feats.norm(dim=1, keepdim=True)          # (B,1,h,w)
+        lesion_attn_map = combined_attn.mean(dim=1, keepdim=True)  # (B, 1, h, w)
+        dam_attn_map = r_feats.norm(dim=1, keepdim=True)          # (B, 1, h, w)
 
         lesion_attn_map = normalize_tensor_to_0_1(lesion_attn_map[0, 0])
         dam_attn_map = normalize_tensor_to_0_1(dam_attn_map[0, 0])
 
-    # ------- 3) ViT-S 全局上下文热图 -------
+    # ------- 3) ViT-S global context heatmap -------
     with torch.no_grad():
         xv = F.interpolate(x, size=224, mode="bilinear", align_corners=False)
-        vit_tokens = model.vitS.forward_features(xv)  # (B,1+N,D) 里 0 是 CLS token
+        vit_tokens = model.vitS.forward_features(xv)  # (B, 1+N, D), index 0 is CLS token
         if vit_tokens.dim() == 3 and vit_tokens.size(1) > 1:
-            patch_tokens = vit_tokens[:, 1:, :]      # 去掉 CLS
+            patch_tokens = vit_tokens[:, 1:, :]      # Remove CLS token
             B, N, D = patch_tokens.shape
-            S = int(N ** 0.5)                        # 14×14 patch
+            S = int(N ** 0.5)                        # 14×14 patches
             patch_tokens = patch_tokens.reshape(B, S, S, D)
-            vit_map = patch_tokens.norm(dim=-1)      # (B,S,S)
+            vit_map = patch_tokens.norm(dim=-1)      # (B, S, S)
             vit_map = normalize_tensor_to_0_1(vit_map[0])
         else:
             vit_map = np.zeros((14, 14), dtype=np.float32)
 
-    # ------- 4) 最终 logits（调用你原来的 forward） -------
+    # ------- 4) Final logits (call the original forward) -------
     with torch.no_grad():
-        logits = model(x)  # (1,5)
+        logits = model(x)  # (1, 5)
 
     return {
         "vessel_mask": normalize_tensor_to_0_1(vessel_mask),
@@ -195,7 +202,7 @@ DEFAULT_CLASS_NAMES = ["No DR", "Mild", "Moderate", "Severe", "Proliferative"]
 
 
 def generate_kantree_video(
-    image_path: str = "Training_Set/Training/1.png",
+    image_path: str = "train_images/000c1434d8d7.png",
     output_video_path: str = "kantree_analysis_demo.mp4",
     r50_path: str = "./resnet50-19c8e357.pth",
     vit_ckpt: str = "hf_hub:timm/vit_small_patch16_224.augreg_in21k",
@@ -206,7 +213,8 @@ def generate_kantree_video(
     device: str = None,
 ):
     """
-    用 EnhancedDRKANTreeNet 对单张 DR 图像做前向推理，并把关键中间步骤做成一个 MP4 视频。
+    Perform forward inference on a single DR image using EnhancedDRKANTreeNet,
+    and create an MP4 video showing key intermediate steps.
     """
     if class_names is None:
         class_names = DEFAULT_CLASS_NAMES
@@ -215,20 +223,20 @@ def generate_kantree_video(
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
 
-    # 1) 读图 & 缩放到 448×448（方便和模型对齐）
+    # 1) Load image & resize to 448×448 (for alignment with model)
     orig_rgb = load_image_rgb(image_path)
     resized_rgb = cv2.resize(orig_rgb, (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_AREA)
 
-    # 2) 转成模型输入张量（同时做 normalize）
+    # 2) Convert to model input tensor (with normalization)
     pil_img = transforms.ToPILImage()(resized_rgb)
     input_tensor = preprocess_transform(pil_img).unsqueeze(0).to(device)
 
-    # 3) 构建模型（权重和 All_KANS_Sencond.py 保持一致）
+    # 3) Build model (weights consistent with All_KANS_Sencond.py)
     model = EnhancedDRKANTreeNet(r50_path=r50_path, vit_ckpt_path=vit_ckpt, n_cls=len(class_names))
     model.to(device)
     model.eval()
 
-    # 如果你有自己训练好的 checkpoint，这里可以加载
+    # Load trained checkpoint if available
     if model_weights is not None and os.path.isfile(model_weights):
         state = torch.load(model_weights, map_location=device)
         if isinstance(state, dict) and "state_dict" in state:
@@ -236,13 +244,13 @@ def generate_kantree_video(
         missing, unexpected = model.load_state_dict(state, strict=False)
         print("Loaded weights with missing keys:", len(missing), "unexpected:", len(unexpected))
 
-    # 4) 提取中间结果
+    # 4) Extract intermediate results
     inter = extract_intermediates(model, input_tensor)
     logits = inter["logits"]
     probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
     pred_idx = int(np.argmax(probs))
 
-    # 把所有热力图 resize 到 448×448 方便叠加
+    # Resize all heatmaps to 448×448 for overlay
     vessel_mask = inter["vessel_mask"]
     lesion_attn = inter["lesion_attn"]
     dam_attn = inter["dam_attn"]
@@ -253,67 +261,67 @@ def generate_kantree_video(
     dam_resized = cv2.resize(dam_attn, (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_LINEAR)
     vit_resized = cv2.resize(vit_map, (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_LINEAR)
 
-    # 5) 逐步构建视频帧
+    # 5) Build video frames step by step
     frames = []
 
     frames.append(
         make_image_frame(
             orig_rgb,
-            title="Step 1: 原始眼底图像",
-            description="从磁盘读取的原始 DR 图像。"
+            title="Step 1: Original Fundus Image",
+            description="Original DR image loaded from disk."
         )
     )
 
     frames.append(
         make_image_frame(
             resized_rgb,
-            title="Step 2: 尺寸统一 (448×448)",
-            description="缩放到模型输入大小，并在代码中做标准化。"
+            title="Step 2: Resized to (448×448)",
+            description="Resized to model input size and normalized."
         )
     )
 
-    # 血管树分支
+    # Vessel tree branch
     vessel_vis = (vessel_resized * 255).astype(np.uint8)
     vessel_vis_rgb = cv2.cvtColor(vessel_vis, cv2.COLOR_GRAY2RGB)
     frames.append(
         make_image_frame(
             vessel_vis_rgb,
-            title="Step 3: 血管树分支 (VesselTreeNet)",
-            description="从绿色通道提取血管样结构，输入 EnhancedVesselTreeNet。"
+            title="Step 3: Vessel Tree Branch (VesselTreeNet)",
+            description="Vessel-like structures extracted from green channel, input to EnhancedVesselTreeNet."
         )
     )
 
-    # 病灶注意力
+    # Lesion attention
     lesion_overlay = overlay_heatmap_on_image(resized_rgb, lesion_resized, alpha=0.5)
     frames.append(
         make_image_frame(
             lesion_overlay,
-            title="Step 4: 病灶注意力 (Lesion Attention)",
-            description="ResNet 高层特征 + 原始图像，自动聚焦疑似病灶区域。"
+            title="Step 4: Lesion Attention",
+            description="ResNet high-level features + original image, automatically focusing on suspected lesion regions."
         )
     )
 
-    # DAM 加强后的局部结构
+    # DAM-enhanced local structures
     dam_overlay = overlay_heatmap_on_image(resized_rgb, dam_resized, alpha=0.5)
     frames.append(
         make_image_frame(
             dam_overlay,
-            title="Step 5: DAM 增强局部结构",
-            description="KANDAM 模块进一步强化有判别力的纹理与局部结构。"
+            title="Step 5: DAM-Enhanced Local Structures",
+            description="KANDAM module further strengthens discriminative textures and local structures."
         )
     )
 
-    # ViT 全局上下文
+    # ViT global context
     vit_overlay = overlay_heatmap_on_image(resized_rgb, vit_resized, alpha=0.5)
     frames.append(
         make_image_frame(
             vit_overlay,
-            title="Step 6: ViT-S 全局上下文",
-            description="基于 ViT-S patch token 范数的全局注意力热力图。"
+            title="Step 6: ViT-S Global Context",
+            description="Global attention heatmap based on ViT-S patch token norms."
         )
     )
 
-    # 最终分类结果
+    # Final classification result
     frames.append(
         make_probability_frame(
             probs,
@@ -325,7 +333,7 @@ def generate_kantree_video(
     if not frames:
         raise RuntimeError("No frames generated.")
 
-    # 每一步停留 step_duration_sec 秒
+    # Each step stays for step_duration_sec seconds
     repeat = max(int(step_duration_sec * fps), 1)
     extended_frames = []
     for frame in frames:
@@ -336,7 +344,7 @@ def generate_kantree_video(
         if extended_frames[i].shape[:2] != (height, width):
             extended_frames[i] = cv2.resize(extended_frames[i], (width, height))
 
-    # 写出 MP4
+    # Write MP4
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     os.makedirs(os.path.dirname(output_video_path) or ".", exist_ok=True)
     writer = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
@@ -353,7 +361,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="EnhancedDRKANTreeNet image analysis -> video demo")
-    parser.add_argument("--image_path", type=str, default="Training_Set/Training/1.png",
+    parser.add_argument("--image_path", type=str, default="train_images/000c1434d8d7.png",
                         help="Path to input fundus image.")
     parser.add_argument("--output_video", type=str, default="kantree_analysis_demo.mp4",
                         help="Output video path.")
