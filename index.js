@@ -11,7 +11,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
-// --- Project Data (Context for AI & Display) ---
+
 const PROJECT_DETAILS = {
     title: "DR-KANTreeNet",
     subtitle: "Diabetic Retinopathy Classification via Kolmogorov-Arnold Tree Networks",
@@ -43,7 +43,7 @@ const PROJECT_DETAILS = {
         ]
     }
 };
-// --- Gemini AI Configuration ---
+
 const SYSTEM_INSTRUCTION = `You are the AI Research Assistant for the project "DR-KANTreeNet". 
 Your goal is to explain the project to visitors.
 Here are the project details:
