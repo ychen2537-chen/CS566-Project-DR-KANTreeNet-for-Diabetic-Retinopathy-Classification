@@ -1,6 +1,7 @@
 # CS566-Project-DR-KANTreeNet-for-Diabetic-Retinopathy-Classification
 
 ## **DR-KANTreeNet**
+Diabetic retinopathy (DR) is a leading cause of vision loss worldwide. **DR-KANTreeNet** is an enhanced deep-learning framework that classifies retinal fundus images into DR severity levels while offering improved interpretability. This repository contains the code and scripts used in our CS566 class project.
 An enhanced deep learning framework for Diabetic Retinopathy (DR) classification using:
 
 - 🧠 **KAN-based modules** for better feature representation  
@@ -9,10 +10,6 @@ An enhanced deep learning framework for Diabetic Retinopathy (DR) classification
 - ⚡ **Multi-GPU support** with efficient training tricks  
 
 ---
-
-# CS566 Project – DR-KANTreeNet for Diabetic Retinopathy Classification
-
-Diabetic retinopathy (DR) is a leading cause of vision loss worldwide. **DR-KANTreeNet** is an enhanced deep-learning framework that classifies retinal fundus images into DR severity levels while offering improved interpretability. This repository contains the code and scripts used in our CS566 class project.
 
 ## 🌟 Highlights
 
