@@ -158,7 +158,7 @@ const Motivation = () => (
                   {/* Normal Eye */}
                   <div className="relative aspect-square rounded-xl overflow-hidden group border border-emerald-500/30 shadow-lg shadow-emerald-900/20">
                      <img 
-                        src="/Normal_Eye.png" 
+                        src={`${import.meta.env.BASE_URL}Normal_Eye.png`}
                         alt="Normal Retina" 
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         onError={(e) => {
@@ -175,7 +175,7 @@ const Motivation = () => (
                   {/* DR Eye with Annotations */}
                   <div className="relative aspect-square rounded-xl overflow-hidden group border border-red-500/30 shadow-lg shadow-red-900/20">
                      <img 
-                        src="/DR_Eye.png" 
+                        src={`${import.meta.env.BASE_URL}DR_Eye.png`}
                         alt="Diabetic Retinopathy" 
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         onError={(e) => {
@@ -356,7 +356,7 @@ const Approach = () => {
                    {/* Base Image (Common to most steps) */}
                    {step.type !== 'chart' && step.type !== 'mask' && (
                       <img 
-                        src="/DR_Eye.png"
+                        src={`${import.meta.env.BASE_URL}DR_Eye.png`}
                         alt="Retina Base"
                         className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
                         style={{ filter: step.filter }}
@@ -367,7 +367,7 @@ const Approach = () => {
                    {step.type === 'mask' && (
                       <div className="absolute inset-0 bg-black">
                          <img 
-                           src="/DR_Eye.png"
+                           src={`${import.meta.env.BASE_URL}DR_Eye.png`}
                            className="w-full h-full object-cover grayscale contrast-[3.0] brightness-[1.5] invert mix-blend-screen opacity-90" 
                            style={{filter: 'contrast(10) grayscale(1)'}} // Simplified vessel-like look
                          />
