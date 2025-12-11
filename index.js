@@ -648,32 +648,33 @@ const ChatWidget = () => {
     
     const userMsg = input;
     setInput("");
-    setMessages(prev => [...prev);
+  setMessages(prev => [...prev, {role: 'user', text: userMsg}]);
     setLoading(true);
 
     try {
       // Initialize the Chat session if it doesn't exist
       if (!chatRef.current) {
-        const ai = new GoogleGenAI({ apiKey);
-        chatRef.current = ai.chats.create({
-          model: "gemini-2.5-flash",
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION
-          }
-        });
+        const ai = new GoogleGenAI({ apiKey: "" });
+    chatRef.current = ai.chats.create({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION
+      }
+    });
       }
 
       // Send the message using the correct SDK method
-      const result = await chatRef.current.sendMessage({ message);
+     const result = await chatRef.current.sendMessage({ message: userMsg });
       // The response text is a property, not a method
       const response = result.text;
+             setMessages(prev => [...prev, {role: 'model', text: response}]);
       
-      setMessages(prev => [...prev);
     } catch (error) {
-      console.error("Chat Error);
-      setMessages(prev => [...prev);
+      console.error("Chat Error:", error);
+     setMessages(prev => [...prev, {role: 'model', text: "Sorry, I encountered an error connecting to the AI. Please check your network or API Key."}]);
     } finally {
       setLoading(false);
+    }
     }
   };
 
