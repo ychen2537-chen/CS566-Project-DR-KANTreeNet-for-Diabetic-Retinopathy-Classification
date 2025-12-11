@@ -158,13 +158,19 @@ const Motivation = () => (
                   {/* Normal Eye */}
                   <div className="relative aspect-square rounded-xl overflow-hidden group border border-emerald-500/30 shadow-lg shadow-emerald-900/20">
                      <img 
-                        src={`${import.meta.env.BASE_URL}Normal_Eye.png`}
+                        src="/Normal_Eye.png"
                         alt="Normal Retina" 
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         onError={(e) => {
-                            // Fallback to abstract medical placeholder if blocked
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=600&auto=format&fit=crop";
-                            e.currentTarget.style.filter = "hue-rotate(90deg) grayscale(50%)";
+                            // Try with BASE_URL if direct path fails
+                            const img = e.currentTarget as HTMLImageElement;
+                            if (!img.src.includes(import.meta.env.BASE_URL || '/')) {
+                                img.src = `${import.meta.env.BASE_URL || '/'}Normal_Eye.png`;
+                            } else {
+                                // Final fallback to abstract medical placeholder
+                                img.src = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=600&auto=format&fit=crop";
+                                img.style.filter = "hue-rotate(90deg) grayscale(50%)";
+                            }
                         }}
                      />
                      <div className="absolute bottom-0 w-full bg-slate-900/80 backdrop-blur-sm py-2 text-center">
@@ -175,12 +181,18 @@ const Motivation = () => (
                   {/* DR Eye with Annotations */}
                   <div className="relative aspect-square rounded-xl overflow-hidden group border border-red-500/30 shadow-lg shadow-red-900/20">
                      <img 
-                        src={`${import.meta.env.BASE_URL}DR_Eye.png`}
+                        src="/DR_Eye.png"
                         alt="Diabetic Retinopathy" 
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         onError={(e) => {
-                            // Fallback to abstract medical placeholder if blocked
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=600&auto=format&fit=crop";
+                            // Try with BASE_URL if direct path fails
+                            const img = e.currentTarget as HTMLImageElement;
+                            if (!img.src.includes(import.meta.env.BASE_URL || '/')) {
+                                img.src = `${import.meta.env.BASE_URL || '/'}DR_Eye.png`;
+                            } else {
+                                // Final fallback to abstract medical placeholder
+                                img.src = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=600&auto=format&fit=crop";
+                            }
                         }}
                      />
                      
@@ -356,10 +368,17 @@ const Approach = () => {
                    {/* Base Image (Common to most steps) */}
                    {step.type !== 'chart' && step.type !== 'mask' && (
                       <img 
-                        src={`${import.meta.env.BASE_URL}DR_Eye.png`}
+                        src="/DR_Eye.png"
                         alt="Retina Base"
                         className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
                         style={{ filter: step.filter }}
+                        onError={(e) => {
+                            // Try with BASE_URL if direct path fails
+                            const img = e.currentTarget as HTMLImageElement;
+                            if (!img.src.includes(import.meta.env.BASE_URL || '/')) {
+                                img.src = `${import.meta.env.BASE_URL || '/'}DR_Eye.png`;
+                            }
+                        }}
                       />
                    )}
 
@@ -367,9 +386,16 @@ const Approach = () => {
                    {step.type === 'mask' && (
                       <div className="absolute inset-0 bg-black">
                          <img 
-                           src={`${import.meta.env.BASE_URL}DR_Eye.png`}
+                           src="/DR_Eye.png"
                            className="w-full h-full object-cover grayscale contrast-[3.0] brightness-[1.5] invert mix-blend-screen opacity-90" 
                            style={{filter: 'contrast(10) grayscale(1)'}} // Simplified vessel-like look
+                           onError={(e) => {
+                               // Try with BASE_URL if direct path fails
+                               const img = e.currentTarget as HTMLImageElement;
+                               if (!img.src.includes(import.meta.env.BASE_URL || '/')) {
+                                   img.src = `${import.meta.env.BASE_URL || '/'}DR_Eye.png`;
+                               }
+                           }}
                          />
                       </div>
                    )}
